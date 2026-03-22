@@ -209,7 +209,7 @@ void M_stock(struct produit t[], int *np, struct mstock tM[], int *nm)
         {
             case 1: Enregistrer_achat(tM, nm, t, *np);   break;
             case 2: Enregistrer_vente(tM, nm, t, *np);   break;
-            case 3: afficher_historique(tM, *nm);         break; /* BUG 7 corrige : &n -> *nm */
+            case 3: afficher_historique(tM, *nm);         break; 
             case 0: break;
             default: printf("\n Choix invalide.\n");
         }
@@ -246,7 +246,7 @@ void produit(struct produit t[], int *n)
 /* ─── Menu Principal ──────────────────────────────────────── */
 int main()
 {
-    int np = 0, nm = 0;         /* BUG 1 corrige : int np=0;nm=0; -> int np=0, nm=0; */
+    int np = 0, nm = 0;       
     struct produit tp[MAX];
     struct mstock  tM[MAX];
     int choix;
