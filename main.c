@@ -31,12 +31,6 @@ typedef struct {
     char message[100];
 } alerte;
 
-/* ─── Prototypes ──────────────────────────────────────────── */
-void enregister_alerte_memoire(alerte hist[], int *nb_h, char date[], char msg_text[]);
-void afficher_produits(struct produit t[], int n);
-void afficher_stock(struct produit t[], int n);
-void saisir_date(char d[]);
-void recherche_alerte_par_code(struct produit tab1[], int n1, char date[]);
 
 /* ─── Recherche de la position d'un produit par code ──────── */
 int pos(struct produit t[], int n, int mcode)
@@ -109,7 +103,7 @@ void afficher_produits(struct produit t[], int n)
     }
 }
 
-/* CORRECTION 1 : afficher_stock manquait — alias de afficher_produits */
+
 void afficher_stock(struct produit t[], int n)
 {
     afficher_produits(t, n);
@@ -216,8 +210,7 @@ void afficher_historique(struct mstock TabM[], int n)
 
 /* ─── MODULE ALERTES ET NOTIFICATIONS ───────────────────── */
 
-/* CORRECTION 2 : la fonction stocke l'alerte dans un tableau en mémoire
-   (remplace l'ancienne version fichier). Signature corrigée. */
+
 void enregister_alerte_memoire(alerte hist[], int *nb_h, char date[], char msg_text[])
 {
     int i = *nb_h;
@@ -245,13 +238,7 @@ void saisir_date(char d[])
     scanf("%10s", d);
 }
 
-/* CORRECTION 3 : "produit" sans "struct" corrigé → "struct produit"
-   CORRECTION 4 : paramètre "alerte hist" (passage par valeur) corrigé
-                  → "alerte hist[]" (passage par pointeur/tableau)
-   CORRECTION 5 : appel enregistrer_alerte(...) corrigé
-                  → enregister_alerte_memoire(hist, nb_h, date, msg)
-   CORRECTION 6 : %d pour prix (float) corrigé → %.2f
-   CORRECTION 7 : champ type_alerte non rempli → strcpy ajouté */
+
 void alerte_stock_faible(struct produit tab1[], int n1, t_alerte tab3[], int *n3,
                          alerte hist[], int *nb_h, char date[])
 {
@@ -263,7 +250,7 @@ void alerte_stock_faible(struct produit tab1[], int n1, t_alerte tab3[], int *n3
         {
             tab3[k].article = tab1[i];
             strcpy(tab3[k].date, date);
-            strcpy(tab3[k].type_alerte, "faible");          /* CORRECTION 7 */
+            strcpy(tab3[k].type_alerte, "faible");          
 
             char msg[100];
             strcpy(msg, "faible:");
@@ -275,18 +262,17 @@ void alerte_stock_faible(struct produit tab1[], int n1, t_alerte tab3[], int *n3
                    tab3[k].article.nom,
                    tab3[k].article.qte,
                    tab3[k].article.seuil_min,
-                   tab3[k].article.prix,           /* CORRECTION 6 : %.2f */
+                   tab3[k].article.prix,          
                    tab3[k].type_alerte);
 
-            enregister_alerte_memoire(hist, nb_h, date, msg); /* CORRECTION 5 */
+            enregister_alerte_memoire(hist, nb_h, date, msg); 
             k++;
         }
     }
     *n3 = k;
 }
 
-/* CORRECTION 8 : commentaire "/stock en rupture" manquait le "*" d'ouverture → supprimé,
-   remplacé par un commentaire C correct */
+
 void alerte_stock_rupture(struct produit tab1[], int n1, t_alerte tab3[], int *n3,
                           alerte hist[], int *nb_h, char date[])
 {
@@ -298,22 +284,22 @@ void alerte_stock_rupture(struct produit tab1[], int n1, t_alerte tab3[], int *n
         {
             tab3[k].article = tab1[i];
             strcpy(tab3[k].date, date);
-            strcpy(tab3[k].type_alerte, "rupture");          /* CORRECTION 7 */
+            strcpy(tab3[k].type_alerte, "rupture");          
 
             char msg[100];
             strcpy(msg, "rupture:");
             strcat(msg, tab1[i].nom);
 
-            printf("[critique!!] date:%s | code:%d | nom:%s | quantite:%d | min:%d | prix:%.2f | alerte:%s\n",
+            printf("[critique!!] date:%s | code:%d | nom:%s | quantite:%d | min:%d | prix:%f | alerte:%s\n",
                    tab3[k].date,
                    tab3[k].article.code,
                    tab3[k].article.nom,
                    tab3[k].article.qte,
                    tab3[k].article.seuil_min,
-                   tab3[k].article.prix,           /* CORRECTION 6 : %.2f */
+                   tab3[k].article.prix,           
                    tab3[k].type_alerte);
 
-            enregister_alerte_memoire(hist, nb_h, date, msg); /* CORRECTION 5 */
+            enregister_alerte_memoire(hist, nb_h, date, msg); 
             k++;
         }
     }
@@ -401,14 +387,7 @@ void produit(struct produit t[], int *n)
 }
 
 /* ─── Sous-menu Alertes et Notifications ─────────────────── */
-/* CORRECTION 9  : fonction dupliquée (deux définitions de m_inventaire_alerte,
-                   dont la première incomplète et mal fermée) → fusionnées en une seule.
-   CORRECTION 10 : accolade fermante "}" manquante dans la 1ère version.
-   CORRECTION 11 : printf("\n 0.retourner...") manquait un ";" final.
-   CORRECTION 12 : hist et nb_h utilisés dans le switch sans être déclarés
-                   → ajoutés comme paramètres de la fonction.
-   CORRECTION 13 : numérotation des cases incohérente (menu 4 options, cases 1-4)
-                   → harmonisée avec le menu affiché. */
+
 void m_inventaire_alerte(struct produit tab1[], int n1, t_alerte tab3[], int *n3,
                          alerte hist[], int *nb_h)
 {
@@ -447,8 +426,7 @@ int main()
     struct produit  tp[MAX];
     struct mstock   tM[MAX];
     t_alerte        alertes[MAX];
-    alerte          historique[MAX];   /* CORRECTION 14 : tableau hist déclaré ici
-                                          et passé à m_inventaire_alerte */
+    alerte          historique[MAX];   
     int choix;
 
     do
