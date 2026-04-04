@@ -235,7 +235,7 @@ void saisir_date(char d[])
 {
     printf("\n saisie de la date");
     printf("\n entrez la date (jj/mm/aaaa) : ");
-    scanf("%10s", d);
+    scanf("%s", d);
 }
 
 
