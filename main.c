@@ -94,11 +94,11 @@ void afficher_produits(struct produit t[], int n)
         printf("\n Aucun produit en stock.\n");
         return;
     }
-    printf("\n %-6s %-20s %-6s %-10s %-8s\n", "Code", "Nom", "Qte", "Seuil_min", "Prix");
+    printf("\n %s %s %s %s %s\n", "Code", "Nom", "Qte", "Seuil_min", "Prix");
     printf("--------------------------------------------------\n");
     for (int i = 0; i < n; i++)
     {
-        printf("%-6d %-20s %-6d %-10d %.2f\n",
+        printf("%d %s %d %d %f\n",
                t[i].code, t[i].nom, t[i].qte, t[i].seuil_min, t[i].prix);
     }
 }
@@ -246,7 +246,7 @@ void alerte_stock_faible(struct produit tab1[], int n1, t_alerte tab3[], int *n3
     printf("\n---liste des produits a faible stock---\n");
     for (int i = 0; i < n1; i++)
     {
-        if (tab1[i].qte < tab1[i].seuil_min && tab1[i].qte > 0)
+        if (tab1[i].qte <= tab1[i].seuil_min && tab1[i].qte > 0)
         {
             tab3[k].article = tab1[i];
             strcpy(tab3[k].date, date);
