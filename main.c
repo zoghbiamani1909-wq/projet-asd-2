@@ -177,7 +177,7 @@ void Enregistrer_vente(struct mstock TabM[], int *nm, struct produit TabP[], int
         }
 
         TabM[*nm].article = TabP[i];
-        strcpy(TabM[*nm].mouv, "sortie");
+        strcpy(TabM[*nm].mouv, "vente");
 
         printf("Donner la date : ");
         scanf("%s", TabM[*nm].date);
@@ -185,7 +185,7 @@ void Enregistrer_vente(struct mstock TabM[], int *nm, struct produit TabP[], int
         TabM[*nm].qt = q;
         TabP[i].qte -= q;
         (*nm)++;
-        printf("Sortie enregistree avec succes\n");
+        printf("vente enregistree avec succes\n");
         return;
     }
     printf("Produit non trouve\n");
