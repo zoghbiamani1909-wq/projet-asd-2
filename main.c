@@ -396,7 +396,7 @@ void m_inventaire_alerte(struct produit tab1[], int n1, t_alerte tab3[], int *n3
 
     do
     {
-        printf("\n   module 3 : Inventaire et Alertes\n");
+        printf("\n--- module 3 : Inventaire et Alertes ---\n");
         printf("  1. Afficher stock actuel\n");
         printf("  2. Filtrer : stock faible\n");
         printf("  3. Filtrer : rupture de stock\n");
