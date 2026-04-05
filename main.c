@@ -81,7 +81,7 @@ void modif_prix_produit(struct produit t[], int n)
     }
 
     float mprix;
-    printf(" Nouveau prix (ancien = %.2f) : ", t[i].prix);
+    printf(" Nouveau prix (ancien = %f) : ", t[i].prix);
     scanf("%f", &mprix);
     t[i].prix = mprix;
     printf("\n Prix modifie avec succes !\n");
