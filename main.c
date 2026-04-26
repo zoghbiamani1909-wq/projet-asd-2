@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define FICHIER_PRODUITS    "produits.txt"
 #define FICHIER_MOUVEMENTS  "mouvements.txt"
@@ -244,7 +245,7 @@ void sauvegarder_alertes(ListeAlertes *la)
     if (!f) { perror("Erreur alertes"); return; }
     NoeudAlerte *cur = la->tete;
     while (cur) {
-        fprintf(f, "%d|%s|%d|%d|%.2f|%s|%s\n",
+        fprintf(f, "%d|%s|%d|%d|%f|%s|%s\n",
                 cur->article.code, cur->article.nom,
                 cur->article.qte,  cur->article.seuil_min, cur->article.prix,
                 cur->type_alerte, cur->date);
@@ -302,6 +303,14 @@ void charger_historique(ListeHist *lh)
     }
     fclose(f);
     printf("\n %d notification(s) chargee(s) depuis '%s'.\n", lh->nb_h, FICHIER_HISTORIQUE);
+}
+
+/* ── Date du jour ─────────────────────────────────────────── */
+void date_du_jour(char buf[11])
+{
+    time_t t = time(NULL);
+    struct tm *lt = localtime(&t);
+    strftime(buf, 11, "%d/%m/%Y", lt);
 }
 
 /* ================================================================
@@ -379,11 +388,11 @@ void Enregistrer_achat(ListeMouvs *lm, ListeProduits *lp)
     NoeudMouv m; memset(&m, 0, sizeof(m));
     m.article = np->article;
     strcpy(m.mouv, "achat");
-    printf("Date : ");     scanf("%19s", m.date);
+    date_du_jour(m.date);
     printf("Quantite : "); scanf("%d", &m.qt);
     np->article.qte += m.qt;
     ajouter_mouv_liste(lm, m);
-    printf("Achat enregistre.\n");
+    printf("Achat enregistre le %s.\n", m.date);
 }
 
 void Enregistrer_vente(ListeMouvs *lm, ListeProduits *lp)
@@ -400,11 +409,11 @@ void Enregistrer_vente(ListeMouvs *lm, ListeProduits *lp)
     NoeudMouv m; memset(&m, 0, sizeof(m));
     m.article = np->article;
     strcpy(m.mouv, "vente");
-    printf("Date : "); scanf("%19s", m.date);
+    date_du_jour(m.date);
     m.qt = q;
     np->article.qte -= q;
     ajouter_mouv_liste(lm, m);
-    printf("Vente enregistree.\n");
+    printf("Vente enregistree le %s.\n", m.date);
 }
 
 void afficher_historique(ListeMouvs *lm)
@@ -424,12 +433,6 @@ void afficher_historique(ListeMouvs *lm)
 /* ================================================================
    MODULE ALERTES
    ================================================================ */
-
-void saisir_date(char d[])
-{
-    printf("\n Entrez la date (jj/mm/aaaa) : ");
-    scanf("%10s", d);
-}
 
 void alerte_stock_faible(ListeProduits *lp, ListeAlertes *la,
                          ListeHist *lh, char date[])
@@ -573,11 +576,11 @@ void m_inventaire_alerte(ListeProduits *lp, ListeAlertes *la, ListeHist *lh)
         printf(" 0. Retour\n");
         printf("Choix : "); scanf("%d", &c);
         switch (c) {
-            case 1: afficher_produits(lp);                          break;
-            case 2: saisir_date(d); alerte_stock_faible(lp,la,lh,d); break;
-            case 3: saisir_date(d); alerte_stock_rupture(lp,la,lh,d); break;
-            case 4: saisir_date(d); recherche_alerte_par_code(lp,d); break;
-            case 5: afficher_historique_notification(lh);           break;
+            case 1: afficher_produits(lp);                                              break;
+            case 2: date_du_jour(d); alerte_stock_faible(lp,la,lh,d);                  break;
+            case 3: date_du_jour(d); alerte_stock_rupture(lp,la,lh,d);                 break;
+            case 4: date_du_jour(d); recherche_alerte_par_code(lp,d);                  break;
+            case 5: afficher_historique_notification(lh);                               break;
             case 0: break;
             default: printf(" Choix invalide.\n");
         }
