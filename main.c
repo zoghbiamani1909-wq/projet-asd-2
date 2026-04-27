@@ -34,7 +34,7 @@ typedef struct noeud_mouv {
     struct noeud_mouv *suiv;
 } NoeudMouv;
 
-/* ── Structure fusionnee : remplace NoeudAlerte + NoeudHist ─── */
+
 typedef struct noeud_notif {
     Produit              article;       /* produit complet           */
     char                 type_alerte[20]; /* "faible" ou "rupture"   */
