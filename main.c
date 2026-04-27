@@ -3,10 +3,9 @@
 #include <string.h>
 #include <time.h>
 
-#define FICHIER_PRODUITS    "produits.txt"
-#define FICHIER_MOUVEMENTS  "mouvements.txt"
-#define FICHIER_ALERTES     "alertes.txt"
-#define FICHIER_HISTORIQUE  "historique_notifications.txt"
+#define FICHIER_PRODUITS      "produits.txt"
+#define FICHIER_MOUVEMENTS    "mouvements.txt"
+#define FICHIER_NOTIFICATIONS "notifications.txt"
 
 /* ================================================================
    STRUCTURES DE BASE
@@ -35,25 +34,20 @@ typedef struct noeud_mouv {
     struct noeud_mouv *suiv;
 } NoeudMouv;
 
-typedef struct noeud_alerte {
-    Produit               article;
-    char                  type_alerte[20];
-    char                  date[11];
-    struct noeud_alerte  *suiv;
-} NoeudAlerte;
-
-typedef struct noeud_hist {
-    char               date[11];
-    char               message[100];
-    struct noeud_hist *suiv;
-} NoeudHist;
+/* ── Structure fusionnee : remplace NoeudAlerte + NoeudHist ─── */
+typedef struct noeud_notif {
+    Produit              article;       /* produit complet           */
+    char                 type_alerte[20]; /* "faible" ou "rupture"   */
+    char                 date[11];      /* date du declenchement     */
+    char                 message[100];  /* ex: "faible:Sucre"        */
+    struct noeud_notif  *suiv;
+} NoeudNotif;
 
 /* ── Listes (pointeurs de tete) ─────────────────────────────── */
 
-typedef struct { NoeudProduit  *tete; int n;    } ListeProduits;
-typedef struct { NoeudMouv    *tete; int nm;   } ListeMouvs;
-typedef struct { NoeudAlerte  *tete; int na;   } ListeAlertes;
-typedef struct { NoeudHist    *tete; int nb_h; } ListeHist;
+typedef struct { NoeudProduit *tete; int n;   } ListeProduits;
+typedef struct { NoeudMouv   *tete; int nm;  } ListeMouvs;
+typedef struct { NoeudNotif  *tete; int nn;  } ListeNotif;
 
 /* ================================================================
    UTILITAIRES LISTES
@@ -84,7 +78,10 @@ void ajouter_produit_liste(ListeProduits *lp, Produit p)
 NoeudProduit *chercher_produit(ListeProduits *lp, int code)
 {
     NoeudProduit *cur = lp->tete;
-    while (cur) { if (cur->article.code == code) return cur; cur = cur->suiv; }
+    while (cur) {
+        if (cur->article.code == code) return cur;
+        cur = cur->suiv;
+    }
     return NULL;
 }
 
@@ -117,56 +114,33 @@ void liberer_mouvs(ListeMouvs *lm)
     lm->tete = NULL; lm->nm = 0;
 }
 
-/* -- Alertes -- */
-void ajouter_alerte_liste(ListeAlertes *la, NoeudAlerte donnees)
+/* -- Notifications  -- */
+void ajouter_notif_liste(ListeNotif *ln, NoeudNotif donnees)
 {
-    NoeudAlerte *nv = malloc(sizeof(NoeudAlerte));
-    if (!nv) { perror("malloc alerte"); exit(1); }
+    NoeudNotif *nv = malloc(sizeof(NoeudNotif));
+    if (!nv) { perror("malloc notif"); exit(1); }
     *nv = donnees; nv->suiv = NULL;
-    if (!la->tete) { la->tete = nv; }
+    if (!ln->tete) { ln->tete = nv; }
     else {
-        NoeudAlerte *cur = la->tete;
+        NoeudNotif *cur = ln->tete;
         while (cur->suiv) cur = cur->suiv;
         cur->suiv = nv;
     }
-    la->na++;
+    ln->nn++;
 }
 
-void liberer_alertes(ListeAlertes *la)
+void liberer_notifs(ListeNotif *ln)
 {
-    NoeudAlerte *cur = la->tete, *tmp;
+    NoeudNotif *cur = ln->tete, *tmp;
     while (cur) { tmp = cur->suiv; free(cur); cur = tmp; }
-    la->tete = NULL; la->na = 0;
-}
-
-/* -- Historique -- */
-void ajouter_hist_liste(ListeHist *lh, const char *date, const char *msg)
-{
-    NoeudHist *nv = malloc(sizeof(NoeudHist));
-    if (!nv) { perror("malloc hist"); exit(1); }
-    strncpy(nv->date,    date, sizeof(nv->date)    - 1); nv->date[sizeof(nv->date)-1]    = '\0';
-    strncpy(nv->message, msg,  sizeof(nv->message) - 1); nv->message[sizeof(nv->message)-1] = '\0';
-    nv->suiv = NULL;
-    if (!lh->tete) { lh->tete = nv; }
-    else {
-        NoeudHist *cur = lh->tete;
-        while (cur->suiv) cur = cur->suiv;
-        cur->suiv = nv;
-    }
-    lh->nb_h++;
-}
-
-void liberer_hist(ListeHist *lh)
-{
-    NoeudHist *cur = lh->tete, *tmp;
-    while (cur) { tmp = cur->suiv; free(cur); cur = tmp; }
-    lh->tete = NULL; lh->nb_h = 0;
+    ln->tete = NULL; ln->nn = 0;
 }
 
 /* ================================================================
    MODULE FICHIERS
    ================================================================ */
 
+/* -- Produits -- */
 void sauvegarder_produits(ListeProduits *lp)
 {
     FILE *f = fopen(FICHIER_PRODUITS, "w");
@@ -175,7 +149,8 @@ void sauvegarder_produits(ListeProduits *lp)
     while (cur) {
         fprintf(f, "%d|%s|%d|%d|%.2f\n",
                 cur->article.code, cur->article.nom,
-                cur->article.qte,  cur->article.seuil_min, cur->article.prix);
+                cur->article.qte,  cur->article.seuil_min,
+                cur->article.prix);
         cur = cur->suiv;
     }
     fclose(f);
@@ -201,6 +176,7 @@ void charger_produits(ListeProduits *lp)
     printf("\n %d produit(s) charges depuis '%s'.\n", lp->n, FICHIER_PRODUITS);
 }
 
+/* -- Mouvements -- */
 void sauvegarder_mouvements(ListeMouvs *lm)
 {
     FILE *f = fopen(FICHIER_MOUVEMENTS, "w");
@@ -209,8 +185,9 @@ void sauvegarder_mouvements(ListeMouvs *lm)
     while (cur) {
         fprintf(f, "%d|%s|%d|%d|%.2f|%s|%s|%d\n",
                 cur->article.code, cur->article.nom,
-                cur->article.qte,  cur->article.seuil_min, cur->article.prix,
-                cur->mouv, cur->date, cur->qt);
+                cur->article.qte,  cur->article.seuil_min,
+                cur->article.prix, cur->mouv,
+                cur->date, cur->qt);
         cur = cur->suiv;
     }
     fclose(f);
@@ -226,10 +203,10 @@ void charger_mouvements(ListeMouvs *lm)
         ligne[strcspn(ligne, "\n")] = '\0';
         NoeudMouv m; memset(&m, 0, sizeof(m));
         char *tok = strtok(ligne, "|"); if (!tok) continue; m.article.code = atoi(tok);
-        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(m.article.nom, tok, sizeof(m.article.nom)-1);
-        tok = strtok(NULL, "|"); if (!tok) continue; m.article.qte = atoi(tok);
+        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(m.article.nom,  tok, sizeof(m.article.nom)-1);
+        tok = strtok(NULL, "|"); if (!tok) continue; m.article.qte       = atoi(tok);
         tok = strtok(NULL, "|"); if (!tok) continue; m.article.seuil_min = atoi(tok);
-        tok = strtok(NULL, "|"); if (!tok) continue; m.article.prix = (float)atof(tok);
+        tok = strtok(NULL, "|"); if (!tok) continue; m.article.prix      = (float)atof(tok);
         tok = strtok(NULL, "|"); if (!tok) continue; strncpy(m.mouv, tok, sizeof(m.mouv)-1);
         tok = strtok(NULL, "|"); if (!tok) continue; strncpy(m.date, tok, sizeof(m.date)-1);
         tok = strtok(NULL, "|"); if (!tok) continue; m.qt = atoi(tok);
@@ -239,70 +216,49 @@ void charger_mouvements(ListeMouvs *lm)
     printf("\n %d mouvement(s) charges depuis '%s'.\n", lm->nm, FICHIER_MOUVEMENTS);
 }
 
-void sauvegarder_alertes(ListeAlertes *la)
+
+void sauvegarder_notifications(ListeNotif *ln)
 {
-    FILE *f = fopen(FICHIER_ALERTES, "w");
-    if (!f) { perror("Erreur alertes"); return; }
-    NoeudAlerte *cur = la->tete;
+    FILE *f = fopen(FICHIER_NOTIFICATIONS, "w");
+    if (!f) { perror("Erreur notifications"); return; }
+    NoeudNotif *cur = ln->tete;
     while (cur) {
-        fprintf(f, "%d|%s|%d|%d|%f|%s|%s\n",
+        fprintf(f, "%s|%d|%s|%d|%d|%.2f|%s|%s\n",
+                cur->date,
                 cur->article.code, cur->article.nom,
-                cur->article.qte,  cur->article.seuil_min, cur->article.prix,
-                cur->type_alerte, cur->date);
+                cur->article.qte,  cur->article.seuil_min,
+                cur->article.prix,
+                cur->type_alerte,
+                cur->message);
         cur = cur->suiv;
     }
     fclose(f);
-    printf("\n %d alerte(s) sauvegardee(s) dans '%s'.\n", la->na, FICHIER_ALERTES);
+    printf("\n %d notification(s) sauvegardee(s) dans '%s'.\n",
+           ln->nn, FICHIER_NOTIFICATIONS);
 }
 
-void charger_alertes(ListeAlertes *la)
+void charger_notifications(ListeNotif *ln)
 {
-    FILE *f = fopen(FICHIER_ALERTES, "r");
-    if (!f) { printf("\n Aucun fichier alertes.\n"); return; }
+    FILE *f = fopen(FICHIER_NOTIFICATIONS, "r");
+    if (!f) { printf("\n Aucun fichier notifications, demarrage a vide.\n"); return; }
     char ligne[256];
     while (fgets(ligne, sizeof(ligne), f)) {
         ligne[strcspn(ligne, "\n")] = '\0';
-        NoeudAlerte a; memset(&a, 0, sizeof(a));
-        char *tok = strtok(ligne, "|"); if (!tok) continue; a.article.code = atoi(tok);
-        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(a.article.nom, tok, sizeof(a.article.nom)-1);
-        tok = strtok(NULL, "|"); if (!tok) continue; a.article.qte = atoi(tok);
-        tok = strtok(NULL, "|"); if (!tok) continue; a.article.seuil_min = atoi(tok);
-        tok = strtok(NULL, "|"); if (!tok) continue; a.article.prix = (float)atof(tok);
-        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(a.type_alerte, tok, sizeof(a.type_alerte)-1);
-        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(a.date, tok, sizeof(a.date)-1);
-        ajouter_alerte_liste(la, a);
-    }
-    fclose(f);
-    printf("\n %d alerte(s) chargee(s) depuis '%s'.\n", la->na, FICHIER_ALERTES);
-}
-
-void sauvegarder_historique(ListeHist *lh)
-{
-    FILE *f = fopen(FICHIER_HISTORIQUE, "w");
-    if (!f) { perror("Erreur historique"); return; }
-    NoeudHist *cur = lh->tete;
-    while (cur) {
-        fprintf(f, "%s|%s\n", cur->date, cur->message);
-        cur = cur->suiv;
-    }
-    fclose(f);
-    printf("\n %d notification(s) sauvegardee(s) dans '%s'.\n", lh->nb_h, FICHIER_HISTORIQUE);
-}
-
-void charger_historique(ListeHist *lh)
-{
-    FILE *f = fopen(FICHIER_HISTORIQUE, "r");
-    if (!f) { printf("\n Aucun fichier historique, notifications vides.\n"); return; }
-    char ligne[256];
-    while (fgets(ligne, sizeof(ligne), f)) {
-        ligne[strcspn(ligne, "\n")] = '\0';
+        NoeudNotif nv; memset(&nv, 0, sizeof(nv));
         char *tok = strtok(ligne, "|"); if (!tok) continue;
-        char date[11]; strncpy(date, tok, sizeof(date)-1); date[sizeof(date)-1] = '\0';
-        tok = strtok(NULL, "|"); if (!tok) continue;
-        ajouter_hist_liste(lh, date, tok);
+        strncpy(nv.date, tok, sizeof(nv.date)-1);
+        tok = strtok(NULL, "|"); if (!tok) continue; nv.article.code = atoi(tok);
+        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(nv.article.nom, tok, sizeof(nv.article.nom)-1);
+        tok = strtok(NULL, "|"); if (!tok) continue; nv.article.qte       = atoi(tok);
+        tok = strtok(NULL, "|"); if (!tok) continue; nv.article.seuil_min = atoi(tok);
+        tok = strtok(NULL, "|"); if (!tok) continue; nv.article.prix      = (float)atof(tok);
+        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(nv.type_alerte, tok, sizeof(nv.type_alerte)-1);
+        tok = strtok(NULL, "|"); if (!tok) continue; strncpy(nv.message,     tok, sizeof(nv.message)-1);
+        ajouter_notif_liste(ln, nv);
     }
     fclose(f);
-    printf("\n %d notification(s) chargee(s) depuis '%s'.\n", lh->nb_h, FICHIER_HISTORIQUE);
+    printf("\n %d notification(s) chargee(s) depuis '%s'.\n",
+           ln->nn, FICHIER_NOTIFICATIONS);
 }
 
 /* ── Date du jour ─────────────────────────────────────────── */
@@ -320,11 +276,11 @@ void date_du_jour(char buf[11])
 void ajout_produit(ListeProduits *lp)
 {
     Produit p; memset(&p, 0, sizeof(p));
-    printf("\n Donner le code      : "); scanf("%d",  &p.code);
-    printf(" Donner le nom       : "); scanf("%19s",  p.nom);
-    printf(" Donner la quantite  : "); scanf("%d",  &p.qte);
-    printf(" Donner le seuil_min : "); scanf("%d",  &p.seuil_min);
-    printf(" Donner le prix      : "); scanf("%f",  &p.prix);
+    printf("\n Donner le code      : "); scanf("%d",   &p.code);
+    printf(" Donner le nom       : "); scanf("%19s",   p.nom);
+    printf(" Donner la quantite  : "); scanf("%d",   &p.qte);
+    printf(" Donner le seuil_min : "); scanf("%d",   &p.seuil_min);
+    printf(" Donner le prix      : "); scanf("%f",   &p.prix);
     ajouter_produit_liste(lp, p);
     printf("\n Produit ajoute avec succes !\n");
 }
@@ -345,14 +301,15 @@ void modif_prix_produit(ListeProduits *lp)
 void afficher_produits(ListeProduits *lp)
 {
     if (lp->n == 0) { printf("\n Aucun produit.\n"); return; }
-    printf("\n %-6s %-20s %-6s %-10s %-8s\n",
+    printf("\n %s %s %s %s %s\n",
            "Code", "Nom", "Qte", "Seuil_min", "Prix");
     printf(" --------------------------------------------------\n");
     NoeudProduit *cur = lp->tete;
     while (cur) {
         printf(" %-6d %-20s %-6d %-10d %.2f\n",
                cur->article.code, cur->article.nom,
-               cur->article.qte,  cur->article.seuil_min, cur->article.prix);
+               cur->article.qte,  cur->article.seuil_min,
+               cur->article.prix);
         cur = cur->suiv;
     }
 }
@@ -362,11 +319,9 @@ void supp_produit(ListeProduits *lp)
     if (lp->n == 0) { printf(" Aucun produit.\n"); return; }
     int code;
     printf(" Code du produit a supprimer : "); scanf("%d", &code);
-
     NoeudProduit *cur = lp->tete, *prec = NULL;
     while (cur && cur->article.code != code) { prec = cur; cur = cur->suiv; }
     if (!cur) { printf("\n Code inexistant.\n"); return; }
-
     if (!prec) lp->tete = cur->suiv;
     else       prec->suiv = cur->suiv;
     free(cur);
@@ -416,7 +371,7 @@ void Enregistrer_vente(ListeMouvs *lm, ListeProduits *lp)
     printf("Vente enregistree le %s.\n", m.date);
 }
 
-void afficher_historique(ListeMouvs *lm)
+void afficher_historique_mouvements(ListeMouvs *lm)
 {
     if (lm->nm == 0) { printf("\n Aucun mouvement.\n"); return; }
     NoeudMouv *cur = lm->tete;
@@ -434,59 +389,52 @@ void afficher_historique(ListeMouvs *lm)
    MODULE ALERTES
    ================================================================ */
 
-void alerte_stock_faible(ListeProduits *lp, ListeAlertes *la,
-                         ListeHist *lh, char date[])
-{
-    /* Vider l'ancienne liste d'alertes */
-    liberer_alertes(la);
 
+
+void alerte_stock_faible(ListeProduits *lp, ListeNotif *ln, char date[])
+{
     printf("\n--- Produits a stock faible ---\n");
+    int trouve = 0;
     NoeudProduit *cur = lp->tete;
     while (cur) {
         Produit *p = &cur->article;
         if (p->qte <= p->seuil_min && p->qte > 0) {
-            NoeudAlerte a; memset(&a, 0, sizeof(a));
-            a.article = *p;
-            strcpy(a.date, date);
-            strcpy(a.type_alerte, "faible");
-            ajouter_alerte_liste(la, a);
-
-            char msg[100];
-            snprintf(msg, sizeof(msg), "faible:%s", p->nom);
-            ajouter_hist_liste(lh, date, msg);
-
+            NoeudNotif nv; memset(&nv, 0, sizeof(nv));
+            nv.article = *p;
+            strncpy(nv.date,        date,     sizeof(nv.date)-1);
+            strncpy(nv.type_alerte, "faible",  sizeof(nv.type_alerte)-1);
+            snprintf(nv.message, sizeof(nv.message), "faible:%s", p->nom);
+            ajouter_notif_liste(ln, nv);
             printf("[ALERTE] %s | code:%d | qte:%d | min:%d\n",
                    date, p->code, p->qte, p->seuil_min);
+            trouve = 1;
         }
         cur = cur->suiv;
     }
+    if (!trouve) printf(" Aucun produit a stock faible.\n");
 }
 
-void alerte_stock_rupture(ListeProduits *lp, ListeAlertes *la,
-                          ListeHist *lh, char date[])
+void alerte_stock_rupture(ListeProduits *lp, ListeNotif *ln, char date[])
 {
-    liberer_alertes(la);
-
     printf("\n--- Produits en rupture de stock ---\n");
+    int trouve = 0;
     NoeudProduit *cur = lp->tete;
     while (cur) {
         Produit *p = &cur->article;
         if (p->qte == 0) {
-            NoeudAlerte a; memset(&a, 0, sizeof(a));
-            a.article = *p;
-            strcpy(a.date, date);
-            strcpy(a.type_alerte, "rupture");
-            ajouter_alerte_liste(la, a);
-
-            char msg[100];
-            snprintf(msg, sizeof(msg), "rupture:%s", p->nom);
-            ajouter_hist_liste(lh, date, msg);
-
+            NoeudNotif nv; memset(&nv, 0, sizeof(nv));
+            nv.article = *p;
+            strncpy(nv.date,        date,      sizeof(nv.date)-1);
+            strncpy(nv.type_alerte, "rupture",  sizeof(nv.type_alerte)-1);
+            snprintf(nv.message, sizeof(nv.message), "rupture:%s", p->nom);
+            ajouter_notif_liste(ln, nv);
             printf("[RUPTURE] %s | code:%d | nom:%s\n",
                    date, p->code, p->nom);
+            trouve = 1;
         }
         cur = cur->suiv;
     }
+    if (!trouve) printf(" Aucun produit en rupture.\n");
 }
 
 void recherche_alerte_par_code(ListeProduits *lp, char date[])
@@ -506,15 +454,54 @@ void recherche_alerte_par_code(ListeProduits *lp, char date[])
                p->nom, p->code, p->qte);
 }
 
-void afficher_historique_notification(ListeHist *lh)
+/* Affiche toutes les notifications enregistrees (historique complet) */
+void afficher_historique_notifications(ListeNotif *ln)
 {
-    if (lh->nb_h == 0) { printf("\n Historique vide.\n"); return; }
-    printf("\n--- Historique des notifications ---\n");
-    NoeudHist *cur = lh->tete;
+    if (ln->nn == 0) { printf("\n Historique vide.\n"); return; }
+    printf("\n--- Historique des notifications (%d entree(s)) ---\n", ln->nn);
+    printf(" %s %s %s %s %s %s\n",
+           "Date", "Type", "Nom", "Qte", "Min", "Message");
+    printf(" ---------------------------------------------------------------\n");
+    NoeudNotif *cur = ln->tete;
     while (cur) {
-        printf(" [%s] %s\n", cur->date, cur->message);
+        printf(" %-11s %-10s %-20s %-6d %-6d %s\n",
+               cur->date,
+               cur->type_alerte,
+               cur->article.nom,
+               cur->article.qte,
+               cur->article.seuil_min,
+               cur->message);
         cur = cur->suiv;
     }
+}
+
+/* Affiche uniquement les alertes du dernier scan (meme date) */
+void afficher_dernieres_alertes(ListeNotif *ln)
+{
+    if (ln->nn == 0) { printf("\n Aucune notification.\n"); return; }
+
+    /* Trouver la date la plus recente (derniere de la liste) */
+    NoeudNotif *cur = ln->tete;
+    char derniere_date[11] = "";
+    while (cur) {
+        strncpy(derniere_date, cur->date, sizeof(derniere_date)-1);
+        cur = cur->suiv;
+    }
+
+    printf("\n--- Dernieres alertes (%s) ---\n", derniere_date);
+    cur = ln->tete;
+    int trouve = 0;
+    while (cur) {
+        if (strcmp(cur->date, derniere_date) == 0) {
+            printf(" [%s] code:%d | nom:%s | qte:%d | min:%d\n",
+                   cur->type_alerte,
+                   cur->article.code, cur->article.nom,
+                   cur->article.qte,  cur->article.seuil_min);
+            trouve = 1;
+        }
+        cur = cur->suiv;
+    }
+    if (!trouve) printf(" Aucune alerte pour cette date.\n");
 }
 
 /* ================================================================
@@ -528,13 +515,13 @@ void M_stock(ListeProduits *lp, ListeMouvs *lm)
         printf("\n--- MODULE MOUVEMENTS ---\n");
         printf(" 1. Enregistrer un achat\n");
         printf(" 2. Enregistrer une vente\n");
-        printf(" 3. Afficher l'historique\n");
+        printf(" 3. Afficher l'historique des mouvements\n");
         printf(" 0. Retour\n");
         printf("Choix : "); scanf("%d", &c);
         switch (c) {
-            case 1: Enregistrer_achat(lm, lp); break;
-            case 2: Enregistrer_vente(lm, lp); break;
-            case 3: afficher_historique(lm);   break;
+            case 1: Enregistrer_achat(lm, lp);            break;
+            case 2: Enregistrer_vente(lm, lp);            break;
+            case 3: afficher_historique_mouvements(lm);   break;
             case 0: break;
             default: printf(" Choix invalide.\n");
         }
@@ -563,24 +550,26 @@ void produit_menu(ListeProduits *lp)
     } while (c != 0);
 }
 
-void m_inventaire_alerte(ListeProduits *lp, ListeAlertes *la, ListeHist *lh)
+void m_inventaire_alerte(ListeProduits *lp, ListeNotif *ln)
 {
     int c; char d[11];
     do {
         printf("\n--- MODULE INVENTAIRE & ALERTES ---\n");
         printf(" 1. Afficher stock actuel\n");
-        printf(" 2. Stock faible\n");
-        printf(" 3. Rupture de stock\n");
+        printf(" 2. Detecter stock faible\n");
+        printf(" 3. Detecter rupture de stock\n");
         printf(" 4. Recherche par code\n");
-        printf(" 5. Historique notifications\n");
+        printf(" 5. Historique complet des notifications\n");
+        printf(" 6. Dernieres alertes uniquement\n");
         printf(" 0. Retour\n");
         printf("Choix : "); scanf("%d", &c);
         switch (c) {
-            case 1: afficher_produits(lp);                                              break;
-            case 2: date_du_jour(d); alerte_stock_faible(lp,la,lh,d);                  break;
-            case 3: date_du_jour(d); alerte_stock_rupture(lp,la,lh,d);                 break;
-            case 4: date_du_jour(d); recherche_alerte_par_code(lp,d);                  break;
-            case 5: afficher_historique_notification(lh);                               break;
+            case 1: afficher_produits(lp);                              break;
+            case 2: date_du_jour(d); alerte_stock_faible(lp, ln, d);   break;
+            case 3: date_du_jour(d); alerte_stock_rupture(lp, ln, d);  break;
+            case 4: date_du_jour(d); recherche_alerte_par_code(lp, d); break;
+            case 5: afficher_historique_notifications(ln);              break;
+            case 6: afficher_dernieres_alertes(ln);                     break;
             case 0: break;
             default: printf(" Choix invalide.\n");
         }
@@ -592,16 +581,14 @@ void m_inventaire_alerte(ListeProduits *lp, ListeAlertes *la, ListeHist *lh)
    ================================================================ */
 int main(void)
 {
-    ListeProduits lp  = { NULL, 0 };
-    ListeMouvs    lm  = { NULL, 0 };
-    ListeAlertes  la  = { NULL, 0 };
-    ListeHist     lh  = { NULL, 0 };
+    ListeProduits lp = { NULL, 0 };
+    ListeMouvs    lm = { NULL, 0 };
+    ListeNotif    ln = { NULL, 0 };
 
     printf("\n=== Chargement des donnees ===\n");
     charger_produits(&lp);
     charger_mouvements(&lm);
-    charger_alertes(&la);
-    charger_historique(&lh);
+    charger_notifications(&ln);
 
     int choix;
     do {
@@ -615,19 +602,17 @@ int main(void)
         printf("\nChoix : "); scanf("%d", &choix);
 
         switch (choix) {
-            case 1: produit_menu(&lp);                         break;
-            case 2: M_stock(&lp, &lm);                        break;
-            case 3: m_inventaire_alerte(&lp, &la, &lh);       break;
+            case 1: produit_menu(&lp);               break;
+            case 2: M_stock(&lp, &lm);               break;
+            case 3: m_inventaire_alerte(&lp, &ln);   break;
             case 0:
                 printf("\n Sauvegarde automatique...\n");
                 sauvegarder_produits(&lp);
                 sauvegarder_mouvements(&lm);
-                sauvegarder_alertes(&la);
-                sauvegarder_historique(&lh);
+                sauvegarder_notifications(&ln);
                 liberer_produits(&lp);
                 liberer_mouvs(&lm);
-                liberer_alertes(&la);
-                liberer_hist(&lh);
+                liberer_notifs(&ln);
                 printf(" Au revoir !\n");
                 break;
             default: printf("\n Choix invalide.\n");
@@ -636,3 +621,4 @@ int main(void)
 
     return 0;
 }
+
