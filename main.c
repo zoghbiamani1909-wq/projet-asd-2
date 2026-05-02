@@ -34,7 +34,7 @@ typedef struct noeud_mouv {
     struct noeud_mouv *suiv;
 } NoeudMouv;
 
-
+/* ── Structure fusionnee : remplace NoeudAlerte + NoeudHist ─── */
 typedef struct noeud_notif {
     Produit              article;       /* produit complet           */
     char                 type_alerte[20]; /* "faible" ou "rupture"   */
@@ -459,7 +459,7 @@ void afficher_historique_notifications(ListeNotif *ln)
 {
     if (ln->nn == 0) { printf("\n Historique vide.\n"); return; }
     printf("\n--- Historique des notifications (%d entree(s)) ---\n", ln->nn);
-    printf(" %s %s %s %s %s %s\n",
+    printf(" %s    %s      %s      %s     %s     %s\n",
            "Date", "Type", "Nom", "Qte", "Min", "Message");
     printf(" ---------------------------------------------------------------\n");
     NoeudNotif *cur = ln->tete;
@@ -512,11 +512,11 @@ void M_stock(ListeProduits *lp, ListeMouvs *lm)
 {
     int c;
     do {
-        printf("\n--- MODULE MOUVEMENTS ---\n");
-        printf(" 1. Enregistrer un achat\n");
-        printf(" 2. Enregistrer une vente\n");
-        printf(" 3. Afficher l'historique des mouvements\n");
-        printf(" 0. Retour\n");
+        printf("\n \t --- MODULE MOUVEMENTS ---\n");
+        printf("\t  1. Enregistrer un achat\n");
+        printf(" \t 2. Enregistrer une vente\n");
+        printf(" \t 3. Afficher l'historique des mouvements\n");
+        printf(" \t 0. Retour\n");
         printf("Choix : "); scanf("%d", &c);
         switch (c) {
             case 1: Enregistrer_achat(lm, lp);            break;
@@ -532,12 +532,12 @@ void produit_menu(ListeProduits *lp)
 {
     int c;
     do {
-        printf("\n--- MODULE PRODUITS ---\n");
-        printf(" 1. Ajouter un produit\n");
-        printf(" 2. Modifier le prix\n");
-        printf(" 3. Afficher les produits\n");
-        printf(" 4. Supprimer un produit\n");
-        printf(" 0. Retour\n");
+        printf("\n \t --- MODULE PRODUITS ---\n");
+        printf("\t  1. Ajouter un produit\n");
+        printf(" \t 2. Modifier le prix\n");
+        printf(" \t 3. Afficher les produits\n");
+        printf(" \t 4. Supprimer un produit\n");
+        printf(" \t 0. Retour\n");
         printf("Choix : "); scanf("%d", &c);
         switch (c) {
             case 1: ajout_produit(lp);      break;
@@ -554,14 +554,14 @@ void m_inventaire_alerte(ListeProduits *lp, ListeNotif *ln)
 {
     int c; char d[11];
     do {
-        printf("\n--- MODULE INVENTAIRE & ALERTES ---\n");
-        printf(" 1. Afficher stock actuel\n");
-        printf(" 2. Detecter stock faible\n");
-        printf(" 3. Detecter rupture de stock\n");
-        printf(" 4. Recherche par code\n");
-        printf(" 5. Historique complet des notifications\n");
-        printf(" 6. Dernieres alertes uniquement\n");
-        printf(" 0. Retour\n");
+        printf("\n \t --- MODULE INVENTAIRE & ALERTES ---\n");
+        printf(" \t 1. Afficher stock actuel\n");
+        printf(" \t 2. Detecter stock faible\n");
+        printf(" \t 3. Detecter rupture de stock\n");
+        printf(" \t 4. Recherche par code\n");
+        printf(" \t 5. Historique complet des notifications\n");
+        printf(" \t 6. Dernieres alertes uniquement\n");
+        printf(" \t 0. Retour\n");
         printf("Choix : "); scanf("%d", &c);
         switch (c) {
             case 1: afficher_produits(lp);                              break;
@@ -592,13 +592,13 @@ int main(void)
 
     int choix;
     do {
-        printf("\n=================================\n");
-        printf("       APPLICATION SMARTSTOCK\n");
-        printf("=================================\n");
-        printf(" 1. Gestion des Produits\n");
-        printf(" 2. Mouvements de Stock\n");
-        printf(" 3. Inventaire et Alertes\n");
-        printf(" 0. Quitter\n");
+        printf("\n \t=================================\n");
+        printf("    \t   APPLICATION SMARTSTOCK\n");
+        printf("\t=================================\n");
+        printf(" \t 1. Gestion des Produits\n");
+        printf(" \t 2. Mouvements de Stock\n");
+        printf(" \t 3. Inventaire et Alertes\n");
+        printf(" \t 0. Quitter\n");
         printf("\nChoix : "); scanf("%d", &choix);
 
         switch (choix) {
@@ -621,4 +621,3 @@ int main(void)
 
     return 0;
 }
-
